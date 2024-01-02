@@ -2,12 +2,13 @@ const PrometheusClient = require("prom-client");
 const { log } = require("../src/util");
 
 const commonLabels = [
-    "monitor_name",
-    "monitor_type",
-    "monitor_url",
-    "monitor_hostname",
-    "monitor_port",
-    "tenant_id"
+    // "monitor_name",
+    // "monitor_type",
+    // "monitor_url",
+    // "monitor_hostname",
+    // "monitor_port",
+    "tenant_id",
+    "ref"
 ];
 
 const monitorCertDaysRemaining = new PrometheusClient.Gauge({
@@ -42,19 +43,27 @@ class Prometheus {
      */
     constructor(monitor, tags) {
         this.monitorLabelValues = {
-            monitor_name: monitor.name,
-            monitor_type: monitor.type,
-            monitor_url: monitor.url,
-            monitor_hostname: monitor.hostname,
-            monitor_port: monitor.port
+            // monitor_name: monitor.name,
+            // monitor_type: monitor.type,
+            // monitor_url: monitor.url,
+            // monitor_hostname: monitor.hostname,
+            // monitor_port: monitor.port
         };
 
         if (tags) {
-            const tag = tags.find(__tag => __tag.name === "tenant");
-            if (tag) {
+            const tenantTag = tags.find(__tag => __tag.name === "tenant");
+            if (tenantTag) {
                 this.monitorLabelValues = {
                     ...this.monitorLabelValues,
-                    tenant_id: tag.value
+                    tenant_id: tenantTag.value
+                };
+            }
+
+            const refTag = tags.find(__tag => __tag.name === "ref");
+            if (refTag) {
+                this.monitorLabelValues = {
+                    ...this.monitorLabelValues,
+                    ref: refTag.value
                 };
             }
         }
