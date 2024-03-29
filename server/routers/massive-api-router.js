@@ -17,10 +17,10 @@ let router = express.Router();
  * @throws {Error} The specified user does not own the monitor
  */
 async function checkOwner(userID, monitorID) {
-    let row = await R.getRow("SELECT id FROM monitor WHERE id = ? AND user_id = ? ", [
-        monitorID,
-        userID,
-    ]);
+    let row = await R.getRow(
+        "SELECT id FROM monitor WHERE id = ? AND user_id = ? ",
+        [monitorID, userID]
+    );
 
     if (!row) {
         throw new Error("You do not own this monitor.");
@@ -39,14 +39,12 @@ async function startMonitor(userID, monitorID, monitorNewTags) {
 
     log.info("manage", `Resume Monitor: ${monitorID} User ID: ${userID}`);
 
-    await R.exec("UPDATE monitor SET active = 1 WHERE id = ? AND user_id = ? ", [
-        monitorID,
-        userID,
-    ]);
+    await R.exec(
+        "UPDATE monitor SET active = 1 WHERE id = ? AND user_id = ? ",
+        [monitorID, userID]
+    );
 
-    let monitor = await R.findOne("monitor", " id = ? ", [
-        monitorID,
-    ]);
+    let monitor = await R.findOne("monitor", " id = ? ", [monitorID]);
 
     if (monitor.id in server.monitorList) {
         server.monitorList[monitor.id].stop();
@@ -69,13 +67,22 @@ async function restartMonitor(userID, monitorID) {
 router.get("/massive/api/monitors", async (req, res) => {
     try {
         const { authorization } = req.headers;
-        const [ username, password ] = Buffer.from(authorization.replace("Basic ", ""), "base64").toString().split(":");
+        const [username, password] = Buffer.from(
+            authorization.replace("Basic ", ""),
+            "base64"
+        )
+            .toString()
+            .split(":");
         const user = await login(username, password);
         const { id: userId } = user;
 
         const monitors = [];
 
-        const monitorList = await R.find("monitor", " user_id = ? ORDER BY weight DESC, name", [ userId ]);
+        const monitorList = await R.find(
+            "monitor",
+            " user_id = ? ORDER BY weight DESC, name",
+            [userId]
+        );
 
         for (const monitor of monitorList) {
             monitors.push(await monitor.toJSON());
@@ -83,12 +90,12 @@ router.get("/massive/api/monitors", async (req, res) => {
 
         res.json({
             ok: true,
-            result: monitors
+            result: monitors,
         });
     } catch (e) {
         res.status(404).json({
             ok: false,
-            msg: e.message
+            msg: e.message,
         });
     }
 });
@@ -96,20 +103,25 @@ router.get("/massive/api/monitors", async (req, res) => {
 router.post("/massive/api/monitor", async (req, res) => {
     try {
         const { authorization } = req.headers;
-        const [ username, password ] = Buffer.from(authorization.replace("Basic ", ""), "base64").toString().split(":");
+        const [username, password] = Buffer.from(
+            authorization.replace("Basic ", ""),
+            "base64"
+        )
+            .toString()
+            .split(":");
         const user = await login(username, password);
         const { id: userId } = user;
 
         const newMonitor = req.body;
         const newTags = [];
         if (newMonitor.new_tags) {
-            newTags.push(
-                ...newMonitor.new_tags
-            );
+            newTags.push(...newMonitor.new_tags);
             delete newMonitor.new_tags;
         }
 
-        newMonitor.accepted_statuscodes_json = JSON.stringify(newMonitor.accepted_statuscodes);
+        newMonitor.accepted_statuscodes_json = JSON.stringify(
+            newMonitor.accepted_statuscodes
+        );
         delete newMonitor.accepted_statuscodes;
 
         const bean = R.dispense("monitor");
@@ -130,31 +142,31 @@ router.post("/massive/api/monitor", async (req, res) => {
 
         if (newTags.length > 0) {
             for (const newTag of newTags) {
-                const tag = await R.findOne("tag", " name = ?", [ newTag.name ]);
+                const tag = await R.findOne("tag", " name = ?", [newTag.name]);
                 if (!tag) {
-                    log.warn(`No tag found in database of name: ${newTag.name}`);
-                    return;
+                    log.warn(
+                        `No tag found in database of name: ${newTag.name}`
+                    );
+                    continue;
                 }
 
-                await R.exec("INSERT INTO monitor_tag (tag_id, monitor_id, value) VALUES (?,?,?)", [
-                    tag.id,
-                    bean.id,
-                    newTag.value
-                ]);
+                await R.exec(
+                    "INSERT INTO monitor_tag (tag_id, monitor_id, value) VALUES (?,?,?)",
+                    [tag.id, bean.id, newTag.value]
+                );
             }
-
         }
 
         res.json({
             ok: true,
             result: {
-                monitorId: bean.id
-            }
+                monitorId: bean.id,
+            },
         });
     } catch (e) {
         res.status(500).json({
             ok: false,
-            msg: e.message
+            msg: e.message,
         });
     }
 });
@@ -162,15 +174,22 @@ router.post("/massive/api/monitor", async (req, res) => {
 router.put("/massive/api/monitor/:monitorId", async (req, res) => {
     try {
         const { authorization } = req.headers;
-        const [ username, password ] = Buffer.from(authorization.replace("Basic ", ""), "base64").toString().split(":");
+        const [username, password] = Buffer.from(
+            authorization.replace("Basic ", ""),
+            "base64"
+        )
+            .toString()
+            .split(":");
         const user = await login(username, password);
         const { id: userId } = user;
 
-        const { params: { monitorId } } = req;
+        const {
+            params: { monitorId },
+        } = req;
 
         const editMonitor = req.body;
 
-        let bean = await R.findOne("monitor", " id = ? ", [ monitorId ]);
+        let bean = await R.findOne("monitor", " id = ? ", [monitorId]);
 
         if (bean.user_id !== userId) {
             throw new Error("Permission denied.");
@@ -196,12 +215,12 @@ router.put("/massive/api/monitor/:monitorId", async (req, res) => {
 
         res.json({
             ok: true,
-            result: bean.id
+            result: bean.id,
         });
     } catch (e) {
         res.status(500).json({
             ok: false,
-            msg: e.message
+            msg: e.message,
         });
     }
 });
@@ -209,11 +228,18 @@ router.put("/massive/api/monitor/:monitorId", async (req, res) => {
 router.delete("/massive/api/monitor/:monitorId", async (req, res) => {
     try {
         const { authorization } = req.headers;
-        const [ username, password ] = Buffer.from(authorization.replace("Basic ", ""), "base64").toString().split(":");
+        const [username, password] = Buffer.from(
+            authorization.replace("Basic ", ""),
+            "base64"
+        )
+            .toString()
+            .split(":");
         const user = await login(username, password);
         const { id: userId } = user;
 
-        const { params: { monitorId } } = req;
+        const {
+            params: { monitorId },
+        } = req;
 
         log.info("manage", `Delete Monitor: ${monitorId} User ID: ${userId}`);
 
@@ -234,7 +260,10 @@ router.delete("/massive/api/monitor/:monitorId", async (req, res) => {
 
         const endTime = Date.now();
 
-        log.info("DB", `Delete Monitor completed in : ${endTime - startTime} ms`);
+        log.info(
+            "DB",
+            `Delete Monitor completed in : ${endTime - startTime} ms`
+        );
 
         res.json({
             ok: true,
@@ -242,7 +271,7 @@ router.delete("/massive/api/monitor/:monitorId", async (req, res) => {
     } catch (e) {
         res.status(500).json({
             ok: false,
-            msg: e.message
+            msg: e.message,
         });
     }
 });
