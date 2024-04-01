@@ -1,3 +1,4 @@
+/* eslint-disable array-bracket-spacing */
 let express = require("express");
 const { R } = require("redbean-node");
 
