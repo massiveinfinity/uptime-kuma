@@ -142,12 +142,18 @@ router.post("/massive/api/monitor", async (req, res) => {
 
         if (newTags.length > 0) {
             for (const newTag of newTags) {
-                const tag = await R.findOne("tag", " name = ?", [newTag.name]);
+                let tag = await R.findOne("tag", " name = ?", [newTag.name]);
                 if (!tag) {
                     log.warn(
                         `No tag found in database of name: ${newTag.name}`
                     );
-                    continue;
+
+                    // Create new tag if not found
+                    tag = R.dispense("tag");
+                    tag.name = newTag.name;
+                    tag.color = "#4B5563";
+
+                    tag.id = await R.store(tag);
                 }
 
                 await R.exec(
@@ -254,6 +260,9 @@ router.delete("/massive/api/monitor/:monitorId", async (req, res) => {
             monitorId,
             userId,
         ]);
+
+        // Remove the tag also
+        await R.exec("DELETE FROM monitor_tag WHERE id = ?", [monitorId]);
 
         // Fix #2880
         apicache.clear();
