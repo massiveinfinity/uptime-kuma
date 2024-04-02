@@ -210,6 +210,24 @@ router.put("/massive/api/monitor/:monitorId", async (req, res) => {
             bean.url = editMonitor.url;
         }
 
+        if (editMonitor.type) {
+            bean.type = editMonitor.type;
+        }
+
+        if (editMonitor.interval) {
+            bean.interval = editMonitor.interval;
+        }
+
+        if (editMonitor.method) {
+            bean.method = editMonitor.method;
+        }
+
+        if (editMonitor.accepted_statuscodes) {
+            bean.accepted_statuscodes_json = JSON.stringify(
+                editMonitor.accepted_statuscodes
+            );
+        }
+
         bean.validate();
 
         await R.store(bean);
